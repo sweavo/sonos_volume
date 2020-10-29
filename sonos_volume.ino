@@ -72,7 +72,7 @@ void setup()
   // WIFI
   WiFiManager wifiManager;
   wifiManager.autoConnect();
-
+  
   Serial.println("Ready");
 }
 
@@ -87,6 +87,60 @@ bool isCommand(const char *command, byte b1, byte b2)
   return *command == b1 && *++command == b2;
 }
 
+bool g_sonosIsPlaying = false;
+int g_sonosVolume=0;
+
+void syncToSonos()
+{
+  g_sonosIsPlaying = (g_sonos.getState(g_sonosIP)==SONOS_STATE_PLAYING);
+  g_sonosVolume = g_sonos.getVolume(g_sonosIP);
+}
+
+void refreshUI()
+{
+  digitalWrite( PIN_RGB_R, g_sonosIsPlaying);
+}
+
+void task250ms()
+{
+
+  syncToSonos();
+  if ( !digitalRead( PIN_BUTT_DN ) && !digitalRead( PIN_BUTT_UP ) )
+  {
+    digitalWrite( PIN_RGB_G, HIGH );
+    digitalWrite( PIN_RGB_B, HIGH );
+    
+    if (g_sonosIsPlaying)
+    {
+      g_sonos.pause( g_sonosIP );      
+    }
+    else
+    {
+    g_sonos.play( g_sonosIP );
+    }
+  }
+  else if ( !digitalRead( PIN_BUTT_DN ) )
+  {
+    digitalWrite( PIN_RGB_G, HIGH );
+    digitalWrite( PIN_RGB_B, LOW );
+    g_sonosVolume-=1;
+    g_sonos.setVolume( g_sonosIP, g_sonosVolume );
+  }
+  else if ( !digitalRead( PIN_BUTT_UP ) )
+  {
+    digitalWrite( PIN_RGB_G, LOW );
+    digitalWrite( PIN_RGB_B, HIGH);
+    g_sonosVolume+=1;
+    g_sonos.setVolume( g_sonosIP, g_sonosVolume );
+  }
+  else
+  {
+    digitalWrite( PIN_RGB_G, LOW );
+    digitalWrite( PIN_RGB_B, LOW );
+  }
+
+  refreshUI();
+}
 
 void handleSerialRead()
 {
@@ -135,14 +189,20 @@ void handleSerialRead()
 // Main Loop
 void loop()
 {
-  if (Serial.available() >= 2) 
+  static int lastMillis=0;
+  int theseMillis = millis() / 250;
+  if ( theseMillis != lastMillis )
   {
-     handleSerialRead();
+    lastMillis=theseMillis;
+    task250ms();
   }
-  else 
+  
+  if (Serial.available() >= 2)
+  {
+    handleSerialRead();
+  }
+  else
   {
     yield();
   }
-  digitalWrite( PIN_RGB_R,   !digitalRead( PIN_BUTT_DN ));
-  digitalWrite( PIN_RGB_B, !digitalRead( PIN_BUTT_UP ));
 }
