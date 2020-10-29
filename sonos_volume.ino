@@ -44,12 +44,12 @@ SonosUPnP g_sonos = SonosUPnP(client, ethConnectError);
 #define LDR_PIN A0      // Define the analog pin the LDR is connected to
 
 // Den
-IPAddress g_sonosIP(192, 168, 1, 49);
-const char g_sonosID[] = "949f3e1c6e30";
+//IPAddress g_sonosIP(192, 168, 1, 49);
+//const char g_sonosID[] = "949f3e1c6e30";
 
 // Kitchen
-//IPAddress g_sonosIP(192, 168, 1, 48);
-//const char g_sonosID[] = "5caafd0b8104";
+IPAddress g_sonosIP(192, 168, 1, 48);
+const char g_sonosID[] = "5caafd0b8104";
 
 void setup()
 {
@@ -103,86 +103,56 @@ void refreshUI()
 
 void task250ms()
 {
+  static bool latchPlayPauseToggle=false;
 
   syncToSonos();
   if ( !digitalRead( PIN_BUTT_DN ) && !digitalRead( PIN_BUTT_UP ) )
   {
-    digitalWrite( PIN_RGB_G, HIGH );
-    digitalWrite( PIN_RGB_B, HIGH );
-    
-    if (g_sonosIsPlaying)
-    {
-      g_sonos.pause( g_sonosIP );      
+    if (!latchPlayPauseToggle) {
+      latchPlayPauseToggle=true;
+
+      digitalWrite( PIN_RGB_G, HIGH );
+      digitalWrite( PIN_RGB_B, HIGH ); 
+
+      if (g_sonosIsPlaying)
+      {
+        g_sonos.pause( g_sonosIP );
+      }
+      else
+      {
+        g_sonos.play( g_sonosIP );
+      }
     }
     else
     {
-    g_sonos.play( g_sonosIP );
+      digitalWrite( PIN_RGB_G, LOW );
+      digitalWrite( PIN_RGB_B, LOW );
     }
   }
   else if ( !digitalRead( PIN_BUTT_DN ) )
   {
+    latchPlayPauseToggle=false;
     digitalWrite( PIN_RGB_G, HIGH );
     digitalWrite( PIN_RGB_B, LOW );
-    g_sonosVolume-=1;
+    g_sonosVolume-=5;
     g_sonos.setVolume( g_sonosIP, g_sonosVolume );
   }
   else if ( !digitalRead( PIN_BUTT_UP ) )
   {
+    latchPlayPauseToggle=false;
     digitalWrite( PIN_RGB_G, LOW );
     digitalWrite( PIN_RGB_B, HIGH);
-    g_sonosVolume+=1;
+    g_sonosVolume+=5;
     g_sonos.setVolume( g_sonosIP, g_sonosVolume );
   }
   else
   {
+    latchPlayPauseToggle=false;
     digitalWrite( PIN_RGB_G, LOW );
     digitalWrite( PIN_RGB_B, LOW );
   }
 
   refreshUI();
-}
-
-void handleSerialRead()
-{
-  // Read 2 bytes from serial buffer
-  if (Serial.available() >= 2)
-  {
-    byte b1 = Serial.read();
-    byte b2 = Serial.read();
-    if (isCommand("ok", b1, b2 ))
-    {
-      Serial.write("OK\r\n");
-    }
-    // Play
-    else if (isCommand("pl", b1, b2))
-    {
-      g_sonos.play(g_sonosIP);
-    }
-    // Pause
-    else if (isCommand("pa", b1, b2))
-    {
-      g_sonos.pause(g_sonosIP);
-    }
-    // Mute On
-    else if (isCommand("mu", b1, b2))
-    {
-      g_sonos.setMute(g_sonosIP, true);
-    }
-    // Mute Off
-    else if (isCommand("m_", b1, b2))
-    {
-      g_sonos.setMute(g_sonosIP, false);
-    }
-    // Volume/Bass/Treble
-    else if (b2 >= '0' && b2 <= '9')
-    {
-      // Volume 0 to 99
-      if (b1 >= '0' && b1 <= '9')
-      {
-        g_sonos.setVolume(g_sonosIP, ((b1 - '0') * 10) + (b2 - '0'));
-      }
-    }
-  }
 }
 
 ///////////////////////////////////////////
@@ -196,13 +166,5 @@ void loop()
     lastMillis=theseMillis;
     task250ms();
   }
-  
-  if (Serial.available() >= 2)
-  {
-    handleSerialRead();
-  }
-  else
-  {
-    yield();
-  }
+  yield();
 }
