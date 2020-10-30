@@ -1,5 +1,5 @@
 /************************************************************************/
-/* Sonos Volume control
+/* Sonos Volume control                                                 */
 /*                                                                      */
 /* This library is free software: you can redistribute it and/or modify */
 /* it under the terms of the GNU General Public License as published by */
@@ -17,6 +17,27 @@
 /* By Steve Carter sweavo@gmail.com October 2020, derived from          */
 /* Sonos UPnP, v1.1 by Thomas Mittet (code@lookout.no) January 2015.    */
 /************************************************************************/
+
+////////////////////////////////////////////////////////
+
+// Board-specific
+#define PIN_LED 2           // GPIO pin of Onboard LED
+#define PIN_RGB_R 15        // RGB Red LED
+#define PIN_RGB_G 12        // RGB Green LED
+#define PIN_RGB_B 13        // RGB Blue LED
+
+#define PIN_LDR   A0        // Define the analog pin the LDR is connected to
+
+// Application-specific
+#define PIN_BUTT_UP 4       // GPIO pin of VOLUME UP button
+#define PIN_BUTT_DN 0       // GPIO pin of VOLUME DOWN button
+#define PIN_JUMPER_DEV 5    // GPIO pin to short to ground to use the development SONOS address/ID
+#define PIN_DEVMODE PIN_LED // GPIO pin of Onboard LED
+#define DEVMODE_ON LOW
+#define DEVMODE_OFF HIGH
+
+////////////////////////////////////////////////////////
+
 #include <ESP8266WiFi.h>
 #include <WiFiManager.h>
 
@@ -32,24 +53,17 @@ void ethConnectError();
 WiFiClient client;
 SonosUPnP g_sonos = SonosUPnP(client, ethConnectError);
 
-#define PIN_BUTT_UP 4    // Define pin the button is connected to
-#define PIN_BUTT_DN 0    // Define pin the button is connected to
-
-#define PIN_LED 2  // Define pin the on-board LED is connected to
-
-#define PIN_RGB_R 15    // RGB Red LED?
-#define PIN_RGB_G 12    // RGB Green LED
-#define PIN_RGB_B 13    // RGB Blue LED?
-
-#define LDR_PIN A0      // Define the analog pin the LDR is connected to
 
 // Den
-//IPAddress g_sonosIP(192, 168, 1, 49);
-//const char g_sonosID[] = "949f3e1c6e30";
+const IPAddress DEN_IP(192, 168, 1, 49);
+const char DEN_ID[] = "949f3e1c6e30";
 
 // Kitchen
-IPAddress g_sonosIP(192, 168, 1, 48);
-const char g_sonosID[] = "5caafd0b8104";
+const IPAddress KITCHEN_IP(192, 168, 1, 48);
+const char KITCHEN_ID[] = "5caafd0b8104";
+
+const IPAddress* sonosIP=&KITCHEN_IP;
+const char* sonosID=KITCHEN_ID;
 
 void setup()
 {
@@ -65,14 +79,27 @@ void setup()
 
   pinMode(PIN_BUTT_DN, INPUT_PULLUP);
   pinMode(PIN_BUTT_UP, INPUT_PULLUP);
-
+  pinMode(PIN_JUMPER_DEV, INPUT_PULLUP);
+  
   // SERIAL
   Serial.begin(115200);
 
   // WIFI
   WiFiManager wifiManager;
   wifiManager.autoConnect();
-  
+
+  // SONOS
+  if (digitalRead(PIN_JUMPER_DEV))
+  {
+    digitalWrite(PIN_DEVMODE,DEVMODE_OFF);
+  }
+  else
+  {
+    sonosIP = &DEN_IP;
+    sonosID = DEN_ID;
+    digitalWrite(PIN_DEVMODE,DEVMODE_ON);
+  }
+
   Serial.println("Ready");
 }
 
@@ -92,8 +119,8 @@ int g_sonosVolume=0;
 
 void syncToSonos()
 {
-  g_sonosIsPlaying = (g_sonos.getState(g_sonosIP)==SONOS_STATE_PLAYING);
-  g_sonosVolume = g_sonos.getVolume(g_sonosIP);
+  g_sonosIsPlaying = (g_sonos.getState((*sonosIP))==SONOS_STATE_PLAYING);
+  g_sonosVolume = g_sonos.getVolume((*sonosIP));
 }
 
 void refreshUI()
@@ -116,11 +143,11 @@ void task250ms()
 
       if (g_sonosIsPlaying)
       {
-        g_sonos.pause( g_sonosIP );
+        g_sonos.pause( (*sonosIP) );
       }
       else
       {
-        g_sonos.play( g_sonosIP );
+        g_sonos.play( (*sonosIP) );
       }
     }
     else
@@ -135,7 +162,7 @@ void task250ms()
     digitalWrite( PIN_RGB_G, HIGH );
     digitalWrite( PIN_RGB_B, LOW );
     g_sonosVolume-=5;
-    g_sonos.setVolume( g_sonosIP, g_sonosVolume );
+    g_sonos.setVolume( (*sonosIP), g_sonosVolume );
   }
   else if ( !digitalRead( PIN_BUTT_UP ) )
   {
@@ -143,7 +170,7 @@ void task250ms()
     digitalWrite( PIN_RGB_G, LOW );
     digitalWrite( PIN_RGB_B, HIGH);
     g_sonosVolume+=5;
-    g_sonos.setVolume( g_sonosIP, g_sonosVolume );
+    g_sonos.setVolume( (*sonosIP), g_sonosVolume );
   }
   else
   {
