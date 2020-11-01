@@ -156,6 +156,41 @@ void task250ms()
   refreshUI();
 }
 
+void handleShortPress() 
+{
+  digitalWrite( PIN_RGB_B, HIGH ); 
+  if (g_sonosIsPlaying)
+  {
+    g_sonos.pause( (*sonosIP) );
+  }
+  else
+  {
+    //g_sonos.playLineIn( *sonosIP, KITCHEN_ID);
+    g_sonos.play( (*sonosIP) );
+  }
+}
+
+void handleLongPress()
+{
+  digitalWrite( PIN_RGB_B, HIGH );    
+  g_sonos.playLineIn( *sonosIP, KITCHEN_ID);
+}
+
+void handleButtonDown()
+{
+  digitalWrite( PIN_RGB_G, HIGH );
+}
+
+void handleButtonUp()
+{
+  digitalWrite( PIN_RGB_G, LOW );
+  digitalWrite( PIN_RGB_B, LOW );
+}
+
+void handleIdle()
+{
+
+}
 ///////////////////////////////////////////
 // Main Loop
 void loop()
@@ -166,56 +201,54 @@ void loop()
   static unsigned int lastMillis=0;
   static unsigned int functionMillis=0;
 
+  static bool functionButtonReading=false;
   static bool functionButtonPressed=false;
   static unsigned int debounceMillis=0;
 
-  int theseMillis = millis();
+   unsigned int theseMillis = millis();
 
-  if ( !digitalRead( PIN_BUTT_FUNCTION ) ) // i.e., pressed.
+  functionButtonReading = !digitalRead( PIN_BUTT_FUNCTION );
+  if ( functionButtonReading != functionButtonPressed )
   {
-    if (!latchPress) // ... and this is the edge
-    {
-      latchPress=true;
-      functionMillis=theseMillis;
-      digitalWrite( PIN_RGB_G, HIGH );
-    }
-
-    if (!latchLongPress && (( theseMillis - functionMillis ) > MS_LONG_PRESS) ) // Long press
-    {
-      latchLongPress=true;
-      digitalWrite( PIN_RGB_B, HIGH );    
-      g_sonos.playLineIn( *sonosIP, KITCHEN_ID);
-    }
+    functionButtonPressed = functionButtonReading;
+    debounceMillis = theseMillis;
   }
 
-  else // function button not pressed
+  if ( (theseMillis - debounceMillis ) > MS_DEBOUNCE )
   {
-    if ( latchPress ) // ... and this is an edge
+    if ( functionButtonReading ) // i.e., pressed.
     {
-      if (!latchLongPress) // It was a short press
+      if (!latchPress) // ... and this is the edge
       {
-        digitalWrite( PIN_RGB_B, HIGH ); 
-        if (g_sonosIsPlaying)
+        latchPress=true;
+        functionMillis=theseMillis;
+        handleButtonDown();
+      }
+
+      if (!latchLongPress && (( theseMillis - functionMillis ) > MS_LONG_PRESS) ) // Long press
+      {
+        latchLongPress=true;
+        handleLongPress();
+      }
+    }
+
+    else // function button not pressed
+    {
+      if ( latchPress ) // ... and this is an edge
+      {
+        if (!latchLongPress) // It was a short press
         {
-          g_sonos.pause( (*sonosIP) );
+          handleShortPress();
         }
-        else
-        {
-      g_sonos.playLineIn( *sonosIP, KITCHEN_ID);
-//          g_sonos.play( (*sonosIP) );
-        }
-        delay(50);
+        
+        latchPress=false;
+        latchLongPress=false;
+
+        handleButtonUp();      
       }
       
-      latchPress=false;
-      latchLongPress=false;
-      
-      digitalWrite( PIN_RGB_G, LOW );
-      digitalWrite( PIN_RGB_B, LOW );
+      handleIdle();  
     }
-    
-    // This is the state where NOTHING is going on.  Sleep?
-  
   }
 
   if ( theseMillis - lastMillis >= 250 )
