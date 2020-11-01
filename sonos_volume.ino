@@ -30,11 +30,15 @@
 
 // Application-specific
 #define PIN_BUTT_UP 4       // GPIO pin of VOLUME UP button
-#define PIN_BUTT_DN 0       // GPIO pin of VOLUME DOWN button
+#define PIN_BUTT_DOWN 0     // GPIO pin of VOLUME DOWN button
+#define PIN_BUTT_FUNCTION 14 // GPIO pin of FUNCTION button
 #define PIN_JUMPER_DEV 5    // GPIO pin to short to ground to use the development SONOS address/ID
 #define PIN_DEVMODE PIN_LED // GPIO pin of Onboard LED
 #define DEVMODE_ON LOW
 #define DEVMODE_OFF HIGH
+
+#define MS_DEBOUNCE 20
+#define MS_LONG_PRESS 2000
 
 ////////////////////////////////////////////////////////
 
@@ -77,8 +81,9 @@ void setup()
   pinMode(PIN_RGB_B, OUTPUT);
   digitalWrite(PIN_RGB_B, LOW);
 
-  pinMode(PIN_BUTT_DN, INPUT_PULLUP);
+  pinMode(PIN_BUTT_DOWN, INPUT_PULLUP);
   pinMode(PIN_BUTT_UP, INPUT_PULLUP);
+  pinMode(PIN_BUTT_FUNCTION, INPUT_PULLUP);
   pinMode(PIN_JUMPER_DEV, INPUT_PULLUP);
   
   // SERIAL
@@ -130,51 +135,20 @@ void refreshUI()
 
 void task250ms()
 {
-  static bool latchPlayPauseToggle=false;
-
   syncToSonos();
-  if ( !digitalRead( PIN_BUTT_DN ) && !digitalRead( PIN_BUTT_UP ) )
-  {
-    if (!latchPlayPauseToggle) {
-      latchPlayPauseToggle=true;
 
-      digitalWrite( PIN_RGB_G, HIGH );
-      digitalWrite( PIN_RGB_B, HIGH ); 
-
-      if (g_sonosIsPlaying)
-      {
-        g_sonos.pause( (*sonosIP) );
-      }
-      else
-      {
-        g_sonos.play( (*sonosIP) );
-      }
-    }
-    else
-    {
-      digitalWrite( PIN_RGB_G, LOW );
-      digitalWrite( PIN_RGB_B, LOW );
-    }
-  }
-  else if ( !digitalRead( PIN_BUTT_DN ) )
+  if ( !digitalRead( PIN_BUTT_DOWN ) )
   {
-    latchPlayPauseToggle=false;
-    digitalWrite( PIN_RGB_G, HIGH );
-    digitalWrite( PIN_RGB_B, LOW );
     g_sonosVolume-=5;
     g_sonos.setVolume( (*sonosIP), g_sonosVolume );
   }
   else if ( !digitalRead( PIN_BUTT_UP ) )
   {
-    latchPlayPauseToggle=false;
-    digitalWrite( PIN_RGB_G, LOW );
-    digitalWrite( PIN_RGB_B, HIGH);
     g_sonosVolume+=5;
     g_sonos.setVolume( (*sonosIP), g_sonosVolume );
   }
   else
   {
-    latchPlayPauseToggle=false;
     digitalWrite( PIN_RGB_G, LOW );
     digitalWrite( PIN_RGB_B, LOW );
   }
@@ -186,12 +160,68 @@ void task250ms()
 // Main Loop
 void loop()
 {
-  static int lastMillis=0;
-  int theseMillis = millis() / 250;
-  if ( theseMillis != lastMillis )
+  static bool latchPress=false;
+  static bool latchLongPress=false;
+  
+  static unsigned int lastMillis=0;
+  static unsigned int functionMillis=0;
+
+  static bool functionButtonPressed=false;
+  static unsigned int debounceMillis=0;
+
+  int theseMillis = millis();
+
+  if ( !digitalRead( PIN_BUTT_FUNCTION ) ) // i.e., pressed.
+  {
+    if (!latchPress) // ... and this is the edge
+    {
+      latchPress=true;
+      functionMillis=theseMillis;
+      digitalWrite( PIN_RGB_G, HIGH );
+    }
+
+    if (!latchLongPress && (( theseMillis - functionMillis ) > MS_LONG_PRESS) ) // Long press
+    {
+      latchLongPress=true;
+      digitalWrite( PIN_RGB_B, HIGH );    
+      g_sonos.playLineIn( *sonosIP, KITCHEN_ID);
+    }
+  }
+
+  else // function button not pressed
+  {
+    if ( latchPress ) // ... and this is an edge
+    {
+      if (!latchLongPress) // It was a short press
+      {
+        digitalWrite( PIN_RGB_B, HIGH ); 
+        if (g_sonosIsPlaying)
+        {
+          g_sonos.pause( (*sonosIP) );
+        }
+        else
+        {
+      g_sonos.playLineIn( *sonosIP, KITCHEN_ID);
+//          g_sonos.play( (*sonosIP) );
+        }
+        delay(50);
+      }
+      
+      latchPress=false;
+      latchLongPress=false;
+      
+      digitalWrite( PIN_RGB_G, LOW );
+      digitalWrite( PIN_RGB_B, LOW );
+    }
+    
+    // This is the state where NOTHING is going on.  Sleep?
+  
+  }
+
+  if ( theseMillis - lastMillis >= 250 )
   {
     lastMillis=theseMillis;
     task250ms();
   }
-  yield();
+
 }
