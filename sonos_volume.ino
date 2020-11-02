@@ -29,10 +29,10 @@
 #define PIN_LDR   A0        // Define the analog pin the LDR is connected to
 
 // Application-specific
-#define PIN_BUTT_UP 4       // GPIO pin of VOLUME UP button
+#define PIN_BUTT_UP 5       // GPIO pin of VOLUME UP button
 #define PIN_BUTT_DOWN 0     // GPIO pin of VOLUME DOWN button
-#define PIN_BUTT_FUNCTION 14 // GPIO pin of FUNCTION button
-#define PIN_JUMPER_DEV 5    // GPIO pin to short to ground to use the development SONOS address/ID
+#define PIN_BUTT_FUNCTION 4 // GPIO pin of FUNCTION button
+#define PIN_JUMPER_DEV 14   // GPIO pin to short to ground to use the development SONOS address/ID
 #define PIN_DEVMODE PIN_LED // GPIO pin of Onboard LED
 #define DEVMODE_ON LOW
 #define DEVMODE_OFF HIGH
