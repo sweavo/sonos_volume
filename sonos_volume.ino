@@ -71,15 +71,18 @@ const char* sonosID=KITCHEN_ID;
 
 void setup()
 {
+  // PWM
+  analogWriteRange (100);
+  
   // GPIO
   pinMode(PIN_LED, OUTPUT);
-  digitalWrite(PIN_LED, HIGH);
+  digitalWrite(PIN_LED, 50);
   pinMode(PIN_RGB_R, OUTPUT);
-  digitalWrite(PIN_RGB_R, LOW);
+  digitalWrite(PIN_RGB_R, 50);
   pinMode(PIN_RGB_G, OUTPUT);
-  digitalWrite(PIN_RGB_G, LOW);
+  digitalWrite(PIN_RGB_G, 50);
   pinMode(PIN_RGB_B, OUTPUT);
-  digitalWrite(PIN_RGB_B, LOW);
+  digitalWrite(PIN_RGB_B, 50);
 
   pinMode(PIN_BUTT_DOWN, INPUT_PULLUP);
   pinMode(PIN_BUTT_UP, INPUT_PULLUP);
@@ -108,6 +111,38 @@ void setup()
   Serial.println("Ready");
 }
 
+/* this lerp takes lower, upper, x and returns:
+ *
+ * 0 if x <= lower
+ * 100 if x>= upper
+ * linear interpolation of values between.
+ */
+ int clampedLerp( int lower, int upper, int current )
+{
+  float gradient = 100.0 / ((float)upper-(float)lower);
+  float result = (float)(current - lower ) * gradient;
+
+  if ( result > 100.0 )
+  {
+    return 100;
+  }
+  else if ( result < 0.0 )
+  {
+    return 0.0;
+  }
+  else
+  {
+    return result;
+  }
+  
+}
+
+void setRGBForVolume( int vol ) {
+  analogWrite( PIN_RGB_G, clampedLerp( 0, 40, vol ) );
+  analogWrite( PIN_RGB_R, clampedLerp( 25,65, vol ) );
+  analogWrite( PIN_RGB_B, clampedLerp( 50, 100, vol) );
+
+}
 void ethConnectError()
 {
   Serial.println(ETHERNET_ERROR_CONNECT);
@@ -130,7 +165,7 @@ void syncToSonos()
 
 void refreshUI()
 {
-  digitalWrite( PIN_RGB_R, g_sonosIsPlaying);
+  setRGBForVolume( g_sonosIsPlaying ? g_sonosVolume : 0);
 }
 
 void task250ms()
@@ -139,21 +174,39 @@ void task250ms()
 
   if ( !digitalRead( PIN_BUTT_DOWN ) )
   {
-    g_sonosVolume-=5;
+    if ( g_sonosVolume > 5 )
+    {
+      g_sonosVolume-=5;
+
+    }else
+    {
+      g_sonosVolume=0;
+
+    }
     g_sonos.setVolume( (*sonosIP), g_sonosVolume );
+    setRGBForVolume( g_sonosVolume );
   }
   else if ( !digitalRead( PIN_BUTT_UP ) )
   {
-    g_sonosVolume+=5;
+    if ( g_sonosVolume < 95 )
+    {
+      g_sonosVolume+=5;
+
+    }else
+    {
+      g_sonosVolume=100;
+    }
     g_sonos.setVolume( (*sonosIP), g_sonosVolume );
+    setRGBForVolume( g_sonosVolume );
   }
   else
   {
-    digitalWrite( PIN_RGB_G, LOW );
-    digitalWrite( PIN_RGB_B, LOW );
+    analogWrite( PIN_RGB_B, 0 );
+    analogWrite( PIN_RGB_R, 0 );
+    analogWrite( PIN_RGB_G, 0 );
+    refreshUI();
   }
 
-  refreshUI();
 }
 
 void handleShortPress() 
