@@ -138,8 +138,8 @@ void setup()
 }
 
 void setRGBForVolume( int vol ) {
-  analogWrite( PIN_RGB_G, clampedLerp( 0, 40, vol ) );
-  analogWrite( PIN_RGB_R, clampedLerp( 25,65, vol ) );
+  analogWrite( PIN_RGB_G, clampedLerp( 0, 25, vol ) );
+  analogWrite( PIN_RGB_R, clampedLerp( 25,50, vol ) );
   analogWrite( PIN_RGB_B, clampedLerp( 50, 100, vol) );
 
 }
@@ -258,7 +258,7 @@ void loop()
   static bool functionButtonPressed=false;
   static unsigned int debounceMillis=0;
 
-   unsigned int theseMillis = millis();
+  unsigned int theseMillis = millis();
 
   functionButtonReading = !digitalRead( PIN_BUTT_FUNCTION );
   if ( functionButtonReading != functionButtonPressed )
@@ -311,3 +311,4 @@ void loop()
   }
 
 }
+
