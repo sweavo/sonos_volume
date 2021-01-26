@@ -1,5 +1,5 @@
 /************************************************************************/
-/* Sonos UPnP, an UPnP based read/write remote control library, v1.1.   */
+/* Sonos Volume control
 /*                                                                      */
 /* This library is free software: you can redistribute it and/or modify */
 /* it under the terms of the GNU General Public License as published by */
@@ -14,7 +14,8 @@
 /* You should have received a copy of the GNU General Public License    */
 /* along with this library. If not, see <http://www.gnu.org/licenses/>. */
 /*                                                                      */
-/* Written by Thomas Mittet (code@lookout.no) January 2015.             */
+/* By Steve Carter sweavo@gmail.com October 2020, derived from          */
+/* Sonos UPnP, v1.1 by Thomas Mittet (code@lookout.no) January 2015.    */
 /************************************************************************/
 #include <ESP8266WiFi.h>
 #include <DNSServer.h>
