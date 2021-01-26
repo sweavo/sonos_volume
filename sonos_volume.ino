@@ -16,68 +16,15 @@
 /*                                                                      */
 /* Written by Thomas Mittet (code@lookout.no) January 2015.             */
 /************************************************************************/
-/*
-
-  Before you can control you Sonos speakers you need to enter their IP
-  addresses and serial numbers below. You can find this information in the
-  Sonos Controller application on your PC, Mac or phone by opening the
-  "About My Sonos System" menu. For each device you will find information
-  similar to this:
-
-  PLAY:3: Bedroom
-  Serial Number: 00-0A-74-7F-33-A7:8
-  Version: 5.2 (build 28183040)
-  Hardware Version: 1.8.1.2-2
-  IP Address: 192.168.0.203
-
-  Given the above, you configure the IP address and serial number (ID):
-  IPAddress g_sonosBedroomIP(192, 168, 0, 203);
-  const char g_sonosBedroomID[] = "000A747F33A7";
-
-  When you are done with the configuration you can send commands to the
-  speakers by entering commands in the Arduino Serial Monitor. The test
-  sketch will mainly control the speaker named Living Room. The other
-  speakers are only there to be able to test the group speakers function.
-
-  Here's a list of the commands that are implemented in the test sketch:
-
-  pl = Play
-  pa = Pause
-  st = Stop
-  pr = Previous track
-  nx = Next track
-
-  fi = Play test file (file path must be changed for this to work)
-  ht = Play http stream (you need access to the music service WIMP)
-  ra = Play radio (works if your speakers are connected to the internet)
-  li = Play line in (only works if the device has an AUX input)
-
-  gr = Group speakers (Living Room, Bathroom and Bedroom)
-  ug = Ungroups speakers
-
-  re = Toggle repeat
-  sh = Toggle shuffle
-  lo = Toggle loudness
-  mu = Toggle mute
-
-  52 = Set volume level 52 (range is 00 - 99)
-  b5 = Set bass level -5 (range is 0 to -9)
-  B5 = Set bass level +5 (range is 0 to +9)
-  t3 = Set treble level -3
-  T0 = Set treble level normal
-
-*/
-
-#include <SonosUPnP.h>
-#include <MicroXPath_P.h>
-//#include <MicroXPath.h>
-
 #include <ESP8266WiFi.h>
 #include <DNSServer.h>
 #include <WiFiManager.h>
 #include <ESP8266mDNS.h>
+
+#include <SonosUPnP.h>
+#include <MicroXPath_P.h>
+
 MDNSResponder mdns;
-#include <ArduinoOTA.h>
 
 #define SERIAL_DATA_THRESHOLD_MS 500
 #define SERIAL_ERROR_TIMEOUT "E: Serial"
@@ -125,25 +72,7 @@ void setup()
   // WIFI
   WiFiManager wifiManager;
   wifiManager.autoConnect();
-//
-//  ArduinoOTA.onStart([]() {
-//    Serial.println("Start");
-//  });
-//  ArduinoOTA.onEnd([]() {
-//    Serial.println("\nEnd");
-//  });
-//  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-//    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-//  });
-//  ArduinoOTA.onError([](ota_error_t error) {
-//    Serial.printf("Error[%u]: ", error);
-//    if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-//    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-//    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-//    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-//    else if (error == OTA_END_ERROR) Serial.println("End Failed");
-//  });
-//  ArduinoOTA.begin();
+
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
